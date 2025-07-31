@@ -1,7 +1,8 @@
 import streamlit as st
-from docx import Document
-from docx.shared import Inches
 from io import BytesIO
+from docx import Document
+from docx.shared import Inches, Pt
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
 st.set_page_config(page_title="Quotation Generator", layout="centered")
 st.title("Quotation Generator App")
@@ -51,6 +52,7 @@ shipping_charges = st.number_input("Shipping Charges (PKR)", min_value=0.0, valu
 packaging_charges = st.number_input("Packaging Charges (PKR)", min_value=0.0, value=0.0)
 tax_rate = st.number_input("Tax Rate (%)", min_value=0.0, value=0.0)
 
+
 # --- Validation ---
 def check_empty_fields():
     empty_fields = []
@@ -70,35 +72,52 @@ def check_empty_fields():
         if item["price"] <= 0: empty_fields.append(f"Price {i+1}")
     return empty_fields
 
-# --- DOCX Generator ---
+
+# --- Word Document Generator ---
 def generate_invoice_docx(invoice_number, invoice_date, company_name, company_logo,
                           invoice_from_name, invoice_from_email, invoice_from_contact,
                           invoice_to_name, invoice_to_email, invoice_to_contact,
                           items, shipping_charges, packaging_charges, tax_rate):
+
     doc = Document()
 
-    if company_logo:
-        doc.add_picture(company_logo, width=Inches(2.0))
+    # Company Name at the top
+    header = doc.add_paragraph()
+    run = header.add_run(company_name.upper())
+    run.bold = True
+    run.font.size = Pt(24)
+    header.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-    doc.add_heading(company_name, level=1)
+    # Add logo if available
+    if company_logo:
+        doc.add_picture(company_logo, width=Inches(1.5))
+    
     doc.add_paragraph(f"Quotation Number: {invoice_number}")
     doc.add_paragraph(f"Quotation Date: {invoice_date}")
-    doc.add_paragraph(" ")
 
-    # Quotation From and To
-    doc.add_heading("Quotation From", level=2)
-    doc.add_paragraph(f"{invoice_from_name}\nEmail: {invoice_from_email}\nContact: {invoice_from_contact}")
-    doc.add_heading("Quotation To", level=2)
-    doc.add_paragraph(f"{invoice_to_name}\nEmail: {invoice_to_email}\nContact: {invoice_to_contact}")
-    doc.add_paragraph(" ")
+    doc.add_paragraph("")
 
-    # Items Table
+    doc.add_paragraph("Quotation From:")
+    doc.add_paragraph(f"{invoice_from_name}")
+    doc.add_paragraph(f"Email: {invoice_from_email}")
+    doc.add_paragraph(f"Contact: {invoice_from_contact}")
+
+    doc.add_paragraph("")
+
+    doc.add_paragraph("Quotation To:")
+    doc.add_paragraph(f"{invoice_to_name}")
+    doc.add_paragraph(f"Email: {invoice_to_email}")
+    doc.add_paragraph(f"Contact: {invoice_to_contact}")
+
+    doc.add_paragraph("")
+
+    # Add Table for Items
     table = doc.add_table(rows=1, cols=5)
-    table.style = 'Light List Accent 1'
+    table.style = 'Table Grid'
     hdr_cells = table.rows[0].cells
     hdr_cells[0].text = 'S.No.'
     hdr_cells[1].text = 'Description'
-    hdr_cells[2].text = 'Quantity'
+    hdr_cells[2].text = 'Qty'
     hdr_cells[3].text = 'Price (PKR)'
     hdr_cells[4].text = 'Total (PKR)'
 
@@ -115,14 +134,38 @@ def generate_invoice_docx(invoice_number, invoice_date, company_name, company_lo
     tax = total_amount * (tax_rate / 100)
     total_incl_tax = total_amount + shipping_charges + packaging_charges + tax
 
-    # Charges
-    doc.add_paragraph(" ")
-    doc.add_heading("Additional Charges", level=2)
+    doc.add_paragraph("")
     doc.add_paragraph(f"Subtotal: {total_amount:.2f} PKR")
     doc.add_paragraph(f"Shipping Charges: {shipping_charges:.2f} PKR")
     doc.add_paragraph(f"Packaging Charges: {packaging_charges:.2f} PKR")
     doc.add_paragraph(f"Tax ({tax_rate}%): {tax:.2f} PKR")
     doc.add_paragraph(f"Total (Incl. Tax): {total_incl_tax:.2f} PKR")
 
-    # Footer
-    doc.add_paragraph("\nAll prices are in Pakistani Rupees_
+    doc.add_paragraph("")
+    doc.add_paragraph("All prices are in Pakistani Rupees (PKR).")
+
+    # Return Word file as bytes
+    buffer = BytesIO()
+    doc.save(buffer)
+    return buffer.getvalue()
+
+
+# --- Generate Word Button ---
+if st.button("Generate Quotation Word File"):
+    empty_fields = check_empty_fields()
+    if not empty_fields:
+        docx_bytes = generate_invoice_docx(
+            invoice_number, invoice_date, company_name, company_logo,
+            invoice_from_name, invoice_from_email, invoice_from_contact,
+            invoice_to_name, invoice_to_email, invoice_to_contact,
+            items, shipping_charges, packaging_charges, tax_rate
+        )
+        st.success("Quotation Word file generated successfully!")
+        st.download_button(
+            label="📄 Download Word File",
+            data=docx_bytes,
+            file_name="Quotation.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+    else:
+        st.error(f"Please fill out the following fields: {', '.join(empty_fields)}")
