@@ -82,17 +82,22 @@ def generate_invoice_pdf(invoice_number, invoice_date, company_name, company_log
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
 
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, 750, f"Quotation Number: {invoice_number}")
-    c.drawString(50, 730, f"Quotation Date: {invoice_date}")
+    # --- Company Name at the Top ---
+    c.setFont("Helvetica-Bold", 24)
+    c.drawCentredString(width / 2, 800, company_name.upper())
 
     if company_logo:
         logo = ImageReader(company_logo)
-        c.drawImage(logo, 400, 730, width=120, height=50)
-    c.setFont("Helvetica", 12)
-    c.drawString(400, 710, company_name)
+        c.drawImage(logo, 450, 770, width=100, height=40)
+
+    # --- Quotation Info ---
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(50, 730, f"Quotation Number: {invoice_number}")
+    c.drawString(50, 710, f"Quotation Date: {invoice_date}")
 
     c.line(50, 700, 550, 700)
+
+    # --- From & To Info ---
     c.setFont("Helvetica-Bold", 12)
     c.drawString(50, 680, "Quotation From:")
     c.drawString(300, 680, "Quotation To:")
@@ -105,7 +110,7 @@ def generate_invoice_pdf(invoice_number, invoice_date, company_name, company_log
     c.drawString(300, 630, f"Contact: {invoice_to_contact}")
     c.line(50, 615, 550, 615)
 
-    # Table data
+    # --- Table Data ---
     data = [["S.No.", "Description", "Qty", "Price (PKR)", "Total (PKR)"]]
     total_amount = 0
     for i, item in enumerate(items):
@@ -134,6 +139,7 @@ def generate_invoice_pdf(invoice_number, invoice_date, company_name, company_log
     table.wrapOn(c, 500, 300)
     table.drawOn(c, 50, y_position)
 
+    # --- Charges ---
     charges_y = y_position - 60
     tax = total_amount * (tax_rate / 100)
     total_incl_tax = total_amount + shipping_charges + packaging_charges + tax
@@ -142,33 +148,4 @@ def generate_invoice_pdf(invoice_number, invoice_date, company_name, company_log
     c.drawString(50, charges_y, "Additional Charges:")
     c.setFont("Helvetica", 11)
     c.drawString(50, charges_y - 20, f"Subtotal: {total_amount:.2f} PKR")
-    c.drawString(50, charges_y - 40, f"Shipping: {shipping_charges:.2f} PKR")
-    c.drawString(50, charges_y - 60, f"Packaging: {packaging_charges:.2f} PKR")
-    c.drawString(50, charges_y - 80, f"Tax ({tax_rate}%): {tax:.2f} PKR")
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, charges_y - 100, f"Total (Incl. Tax): {total_incl_tax:.2f} PKR")
-    c.setFont("Helvetica", 10)
-    c.drawString(50, 40, "All prices are in Pakistani Rupees (PKR).")
-    c.showPage()
-    c.save()
-    return buffer.getvalue()
-
-# --- Generate PDF Button ---
-if st.button("Generate Quotation PDF"):
-    empty_fields = check_empty_fields()
-    if not empty_fields:
-        pdf_bytes = generate_invoice_pdf(
-            invoice_number, invoice_date, company_name, company_logo,
-            invoice_from_name, invoice_from_email, invoice_from_contact,
-            invoice_to_name, invoice_to_email, invoice_to_contact,
-            items, shipping_charges, packaging_charges, tax_rate
-        )
-        st.success("Quotation PDF generated successfully!")
-        st.download_button(
-            label="📄 Download PDF",
-            data=pdf_bytes,
-            file_name="Quotation.pdf",
-            mime="application/pdf"
-        )
-    else:
-        st.error(f"Please fill out the following fields: {', '.join(empty_fields)}")
+    c.drawString(50, charges_y - 40, f"Shipping: {shipp_
