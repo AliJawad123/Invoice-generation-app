@@ -1,9 +1,6 @@
 import streamlit as st
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from reportlab.lib import colors
-from reportlab.platypus import Table, TableStyle
-from reportlab.lib.utils import ImageReader
+from docx import Document
+from docx.shared import Inches
 from io import BytesIO
 
 st.set_page_config(page_title="Quotation Generator", layout="centered")
@@ -73,102 +70,59 @@ def check_empty_fields():
         if item["price"] <= 0: empty_fields.append(f"Price {i+1}")
     return empty_fields
 
-# --- PDF Generator ---
-def generate_invoice_pdf(invoice_number, invoice_date, company_name, company_logo,
-                         invoice_from_name, invoice_from_email, invoice_from_contact,
-                         invoice_to_name, invoice_to_email, invoice_to_contact,
-                         items, shipping_charges, packaging_charges, tax_rate):
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
-
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, 750, f"Quotation Number: {invoice_number}")
-    c.drawString(50, 730, f"Quotation Date: {invoice_date}")
+# --- DOCX Generator ---
+def generate_invoice_docx(invoice_number, invoice_date, company_name, company_logo,
+                          invoice_from_name, invoice_from_email, invoice_from_contact,
+                          invoice_to_name, invoice_to_email, invoice_to_contact,
+                          items, shipping_charges, packaging_charges, tax_rate):
+    doc = Document()
 
     if company_logo:
-        logo = ImageReader(company_logo)
-        c.drawImage(logo, 400, 730, width=120, height=50)
-    c.setFont("Helvetica", 12)
-    c.drawString(400, 710, company_name)
+        doc.add_picture(company_logo, width=Inches(2.0))
 
-    c.line(50, 700, 550, 700)
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, 680, "Quotation From:")
-    c.drawString(300, 680, "Quotation To:")
-    c.setFont("Helvetica", 11)
-    c.drawString(50, 660, invoice_from_name)
-    c.drawString(50, 645, f"Email: {invoice_from_email}")
-    c.drawString(50, 630, f"Contact: {invoice_from_contact}")
-    c.drawString(300, 660, invoice_to_name)
-    c.drawString(300, 645, f"Email: {invoice_to_email}")
-    c.drawString(300, 630, f"Contact: {invoice_to_contact}")
-    c.line(50, 615, 550, 615)
+    doc.add_heading(company_name, level=1)
+    doc.add_paragraph(f"Quotation Number: {invoice_number}")
+    doc.add_paragraph(f"Quotation Date: {invoice_date}")
+    doc.add_paragraph(" ")
 
-    # Table data
-    data = [["S.No.", "Description", "Qty", "Price (PKR)", "Total (PKR)"]]
+    # Quotation From and To
+    doc.add_heading("Quotation From", level=2)
+    doc.add_paragraph(f"{invoice_from_name}\nEmail: {invoice_from_email}\nContact: {invoice_from_contact}")
+    doc.add_heading("Quotation To", level=2)
+    doc.add_paragraph(f"{invoice_to_name}\nEmail: {invoice_to_email}\nContact: {invoice_to_contact}")
+    doc.add_paragraph(" ")
+
+    # Items Table
+    table = doc.add_table(rows=1, cols=5)
+    table.style = 'Light List Accent 1'
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = 'S.No.'
+    hdr_cells[1].text = 'Description'
+    hdr_cells[2].text = 'Quantity'
+    hdr_cells[3].text = 'Price (PKR)'
+    hdr_cells[4].text = 'Total (PKR)'
+
     total_amount = 0
-    for i, item in enumerate(items):
-        data.append([
-            item["serial_number"],
-            item["production_description"],
-            str(item["quantity"]),
-            f"{item['price']:.2f}",
-            f"{item['total']:.2f}"
-        ])
+    for item in items:
+        row_cells = table.add_row().cells
+        row_cells[0].text = item["serial_number"]
+        row_cells[1].text = item["production_description"]
+        row_cells[2].text = str(item["quantity"])
+        row_cells[3].text = f"{item['price']:.2f}"
+        row_cells[4].text = f"{item['total']:.2f}"
         total_amount += item["total"]
 
-    table = Table(data, colWidths=[50, 200, 50, 80, 80])
-    style = TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-        ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
-        ("GRID", (0, 0), (-1, -1), 1, colors.black),
-    ])
-    table.setStyle(style)
-
-    y_position = 580 - (len(items) * 20)
-    table.wrapOn(c, 500, 300)
-    table.drawOn(c, 50, y_position)
-
-    charges_y = y_position - 60
     tax = total_amount * (tax_rate / 100)
     total_incl_tax = total_amount + shipping_charges + packaging_charges + tax
 
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, charges_y, "Additional Charges:")
-    c.setFont("Helvetica", 11)
-    c.drawString(50, charges_y - 20, f"Subtotal: {total_amount:.2f} PKR")
-    c.drawString(50, charges_y - 40, f"Shipping: {shipping_charges:.2f} PKR")
-    c.drawString(50, charges_y - 60, f"Packaging: {packaging_charges:.2f} PKR")
-    c.drawString(50, charges_y - 80, f"Tax ({tax_rate}%): {tax:.2f} PKR")
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, charges_y - 100, f"Total (Incl. Tax): {total_incl_tax:.2f} PKR")
-    c.setFont("Helvetica", 10)
-    c.drawString(50, 40, "All prices are in Pakistani Rupees (PKR).")
-    c.showPage()
-    c.save()
-    return buffer.getvalue()
+    # Charges
+    doc.add_paragraph(" ")
+    doc.add_heading("Additional Charges", level=2)
+    doc.add_paragraph(f"Subtotal: {total_amount:.2f} PKR")
+    doc.add_paragraph(f"Shipping Charges: {shipping_charges:.2f} PKR")
+    doc.add_paragraph(f"Packaging Charges: {packaging_charges:.2f} PKR")
+    doc.add_paragraph(f"Tax ({tax_rate}%): {tax:.2f} PKR")
+    doc.add_paragraph(f"Total (Incl. Tax): {total_incl_tax:.2f} PKR")
 
-# --- Generate PDF Button ---
-if st.button("Generate Quotation PDF"):
-    empty_fields = check_empty_fields()
-    if not empty_fields:
-        pdf_bytes = generate_invoice_pdf(
-            invoice_number, invoice_date, company_name, company_logo,
-            invoice_from_name, invoice_from_email, invoice_from_contact,
-            invoice_to_name, invoice_to_email, invoice_to_contact,
-            items, shipping_charges, packaging_charges, tax_rate
-        )
-        st.success("Quotation PDF generated successfully!")
-        st.download_button(
-            label="📄 Download PDF",
-            data=pdf_bytes,
-            file_name="Quotation.pdf",
-            mime="application/pdf"
-        )
-    else:
-        st.error(f"Please fill out the following fields: {', '.join(empty_fields)}")
+    # Footer
+    doc.add_paragraph("\nAll prices are in Pakistani Rupees_
