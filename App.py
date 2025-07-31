@@ -6,7 +6,7 @@ from reportlab.platypus import Table, TableStyle
 from io import BytesIO
 
 # Streamlit app title
-st.title("Invoice Generator App")
+st.title("Quotation Generator App")
 
 # Input fields for invoice details
 st.header("Quotation Details")
