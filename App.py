@@ -9,24 +9,23 @@ from io import BytesIO
 st.title("Invoice Generator App")
 
 # Input fields for invoice details
-st.header("Invoice Details")
-invoice_number = st.text_input("Invoice Number:")
-reference_number = st.text_input("Reference Number:")
-invoice_date = st.text_input("Invoice Date:")
+st.header("Quotation Details")
+invoice_number = st.text_input("Quotation Number:")
+invoice_date = st.text_input("Quotation Date:")
 company_name = st.text_input("Company Name:")
 company_logo = st.file_uploader("Upload Company Logo (optional)", type=["png", "jpg", "jpeg"])
 
 # Input fields for "Invoice From"
-st.header("Invoice From")
-invoice_from_name = st.text_input("Name (Invoice From):")
-invoice_from_email = st.text_input("Email (Invoice From):")
-invoice_from_contact = st.text_input("Contact Number (Invoice From):")
+st.header("Quotation From")
+invoice_from_name = st.text_input("Name (Quotation From):")
+invoice_from_email = st.text_input("Email (Quotation From):")
+invoice_from_contact = st.text_input("Contact Number (Quotation From):")
 
 # Input fields for "Invoice To"
-st.header("Invoice To")
-invoice_to_name = st.text_input("Name (Invoice To):")
-invoice_to_email = st.text_input("Email (Invoice To):")
-invoice_to_contact = st.text_input("Contact Number (Invoice To):")
+st.header("Quotation To")
+invoice_to_name = st.text_input("Name (Quotation To):")
+invoice_to_email = st.text_input("Email (Quotation To):")
+invoice_to_contact = st.text_input("Contact Number (Quotation To):")
 
 # Input fields for items
 st.header("Items")
@@ -60,29 +59,27 @@ def check_empty_fields():
     
     # Invoice Details
     if not invoice_number:
-        empty_fields.append("Invoice Number")
-    if not reference_number:
-        empty_fields.append("Reference Number")
+        empty_fields.append("Quotation Number")
     if not invoice_date:
-        empty_fields.append("Invoice Date")
+        empty_fields.append("Quotation Date")
     if not company_name:
         empty_fields.append("Company Name")
     
     # Invoice From
     if not invoice_from_name:
-        empty_fields.append("Name (Invoice From)")
+        empty_fields.append("Name (Quotation From)")
     if not invoice_from_email:
-        empty_fields.append("Email (Invoice From)")
+        empty_fields.append("Email (Quotation From)")
     if not invoice_from_contact:
-        empty_fields.append("Contact Number (Invoice From)")
+        empty_fields.append("Contact Number (Quotation From)")
     
     # Invoice To
     if not invoice_to_name:
-        empty_fields.append("Name (Invoice To)")
+        empty_fields.append("Name (Quotation To)")
     if not invoice_to_email:
-        empty_fields.append("Email (Invoice To)")
+        empty_fields.append("Email (Quotation To)")
     if not invoice_to_contact:
-        empty_fields.append("Contact Number (Invoice To)")
+        empty_fields.append("Contact Number (Quotation To)")
     
     # Items
     for i, item in enumerate(items):
@@ -98,7 +95,7 @@ def check_empty_fields():
     return empty_fields
 
 # Function to generate PDF invoice
-def generate_invoice_pdf(invoice_number, reference_number, invoice_date, company_name, company_logo,
+def generate_invoice_pdf(invoice_number, invoice_date, company_name, company_logo,
                          invoice_from_name, invoice_from_email, invoice_from_contact,
                          invoice_to_name, invoice_to_email, invoice_to_contact,
                          items, shipping_charges, packaging_charges, tax_rate):
@@ -113,7 +110,6 @@ def generate_invoice_pdf(invoice_number, reference_number, invoice_date, company
     
     # Add invoice number, reference number, and date on the left
     c.drawString(50, 750, f"Invoice Number: {invoice_number}")
-    c.drawString(50, 730, f"Reference Number: {reference_number}")
     c.drawString(50, 710, f"Invoice Date: {invoice_date}")
     
     # Add company name and logo on the right
@@ -133,8 +129,8 @@ def generate_invoice_pdf(invoice_number, reference_number, invoice_date, company
     
     # Add "Invoice From" and "Invoice To" sections
     c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, 680, "Invoice From:")
-    c.drawString(300, 680, "Invoice To:")
+    c.drawString(50, 680, "Quotation From:")
+    c.drawString(300, 680, "Quotation To:")
     
     c.setFont("Helvetica", 12)
     c.drawString(50, 660, invoice_from_name)
@@ -215,26 +211,26 @@ def generate_invoice_pdf(invoice_number, reference_number, invoice_date, company
     return pdf_bytes
 
 # Button to generate and download the PDF
-if st.button("Generate Invoice PDF"):
+if st.button("Generate Quotation PDF"):
     empty_fields = check_empty_fields()
     
     if not empty_fields:
         # Generate the PDF
         pdf_bytes = generate_invoice_pdf(
-            invoice_number, reference_number, invoice_date, company_name, company_logo,
+            invoice_number, invoice_date, company_name, company_logo,
             invoice_from_name, invoice_from_email, invoice_from_contact,
             invoice_to_name, invoice_to_email, invoice_to_contact,
             items, shipping_charges, packaging_charges, tax_rate
         )
         
         # Show success message
-        st.success("Invoice PDF generated successfully!")
+        st.success("Quotation PDF generated successfully!")
         
         # Provide a download link for the PDF
         st.download_button(
-            label="Download Invoice PDF",
+            label="Download Quotation PDF",
             data=pdf_bytes,
-            file_name="invoice.pdf",
+            file_name="Quotation.pdf",
             mime="application/pdf",
         )
     else:
